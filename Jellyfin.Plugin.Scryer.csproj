@@ -1,21 +1,34 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Jellyfin.Plugin.Scryer</AssemblyName>
     <RootNamespace>Jellyfin.Plugin.Scryer</RootNamespace>
     <Product>Scryer</Product>
-    <Version>0.1.23.0</Version>
+    <Version>0.1.24.0</Version>
+  </PropertyGroup>
+
+  <!-- A higher revision lets a server upgrade replace the older runtime's assembly. -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <Version>$([System.Version]::Parse('$(Version)').ToString(3)).1</Version>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Remove="tests/**/*.cs" />
     <InternalsVisibleTo Include="Scryer.Plugin.SelfTest" />
-    <!-- Version must match the target Jellyfin server's plugin ABI (10.11.x server -> Jellyfin.Controller 10.11.x). -->
+  </ItemGroup>
+
+  <!-- Each server line needs its own assembly; never ship Jellyfin's assemblies in the plugin ZIP. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
     <PackageReference Include="Jellyfin.Controller" Version="10.11.11" />
     <PackageReference Include="Jellyfin.Model" Version="10.11.11" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <PackageReference Include="Jellyfin.Controller" Version="12.0.0" />
+    <PackageReference Include="Jellyfin.Model" Version="12.0.0" />
   </ItemGroup>
 
   <ItemGroup>

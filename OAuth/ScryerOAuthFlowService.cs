@@ -35,6 +35,10 @@ public sealed class ScryerOAuthFlowService : IScryerOAuthFlowService
     private static readonly TimeSpan TransactionLifetime = TimeSpan.FromMinutes(10);
     private static readonly HashSet<string> ReturnPages = new(StringComparer.Ordinal)
     {
+        "#/home?scryer=discovery",
+        "#/home?scryer=calendar",
+        "#/home?scryer=requests",
+        "#/home?scryer=download",
         "#/scryer-discovery",
         "#/scryer-calendar",
         "#/scryer-requests",

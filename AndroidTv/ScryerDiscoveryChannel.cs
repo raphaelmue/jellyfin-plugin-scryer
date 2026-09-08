@@ -140,7 +140,7 @@ public sealed class ScryerDiscoveryChannel : IChannel, IHasCacheKey
 
     public bool IsEnabledFor(string userId) => IsChannelEnabled();
 
-    public string? GetCacheKey(string? userId)
+    public string GetCacheKey(string? userId)
     {
         // Daily, not hourly: every key change makes Jellyfin refetch the channel and upsert its
         // items into the server's own library database for each user.

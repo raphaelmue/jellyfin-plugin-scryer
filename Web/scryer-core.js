@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var VERSION = '153.13';
+    var VERSION = '153.14';
     var runtime = window.ScryerRuntime153;
     if (!runtime || runtime.version !== VERSION) throw new Error('Scryer loader must run before core.');
     if (window.Scryer && window.Scryer.version === VERSION && window.Scryer._rfc153Installed) {
@@ -118,7 +118,7 @@
         };
     }
     Scryer.lifecycle = createLifecycle();
-    Scryer._testing = { createLifecycle: createLifecycle };
+    Scryer._testing = { createLifecycle: createLifecycle, pageRoute: pageRoute, pageByRoute: pageByRoute, ensureSection: ensureSection, isRuntimeSurface: isRuntimeSurface };
 
     var state = {
         visibleId: null, previousPage: null, featureConfigReady: false, featureConfigKey: null,
@@ -131,6 +131,8 @@
         return null;
     }
     function pageByRoute(hash) {
+        var modern = /^#\/home\?scryer=([a-z]+)$/.exec(hash);
+        if (modern) return pageById(modern[1]);
         for (var index = 0; index < PAGES.length; index++) if (PAGES[index].route === hash) return PAGES[index];
         return null;
     }
@@ -468,7 +470,7 @@
     }
     function startConnection(returnPage) {
         var page = pageByRoute(returnPage || window.location.hash);
-        var target = page ? page.route : '#/scryer-discovery';
+        var target = page ? pageRoute(page) : '#/home?scryer=discovery';
         var popup = openOAuthWindow();
         if (!popup) return Promise.reject(new Error('Allow pop-ups for Jellyfin, then try Connect again.'));
         state.oauthWindow = popup;
@@ -663,12 +665,20 @@
     };
 
     function ensureSection() {
+        if (/^#\/(?:dashboard(?:\/|\?|$)|configurationpage(?:\?|$))/.test(window.location.hash)) return null;
         var sidebar = document.querySelector('.mainDrawer-scrollContainer');
-        if (!sidebar) return null;
+        // Modern Jellyfin uses React pages and has no desktop drawer. Keep our
+        // navigation beside its page container, outside React's rendered page.
+        var modernPages = document.querySelector('main .mainAnimatedPages');
+        if (modernPages) sidebar = modernPages.parentElement;
+        if (!sidebar || !PAGES.length) return null;
         var section = sidebar.querySelector('.scryerSection');
         if (!section) {
-            section = document.createElement('div'); section.className = 'scryerSection'; section.innerHTML = '<h3 class="sidebarHeader">Scryer</h3>';
-            var mediaSection = sidebar.querySelector('.libraryMenuOptions');
+            section = document.createElement('nav');
+            section.setAttribute('aria-label', 'Scryer');
+            section.className = 'scryerSection' + (modernPages ? ' scryerModernNav' : '');
+            section.innerHTML = '<h3 class="sidebarHeader">Scryer</h3>';
+            var mediaSection = modernPages || sidebar.querySelector('.libraryMenuOptions');
             if (mediaSection) sidebar.insertBefore(section, mediaSection); else sidebar.appendChild(section);
         }
         return section;
@@ -680,7 +690,7 @@
         PAGES.forEach(function (page) {
             if (section.querySelector('.scryer-nav-' + page.id)) return;
             var link = document.createElement('a');
-            link.setAttribute('is', 'emby-linkbutton'); link.className = 'navMenuOption lnkMediaFolder emby-button scryer-nav-' + page.id; link.href = page.route;
+            link.setAttribute('is', 'emby-linkbutton'); link.className = 'navMenuOption lnkMediaFolder emby-button scryer-nav-' + page.id; link.href = pageRoute(page);
             link.innerHTML = '<svg class="navMenuOptionIcon scryerNavIcon" viewBox="0 0 24 24" width="24" height="24" focusable="false" aria-hidden="true"><path fill="currentColor" d="' + page.iconPath + '"></path></svg><span class="sectionName navMenuOptionText">' + escapeHtml(page.title) + '</span>';
             link.addEventListener('click', function (event) {
                 event.preventDefault();
@@ -704,10 +714,16 @@
         var content = document.getElementById('scryer-content-' + page.id);
         if (content) Scryer.lifecycle.mount(page.id, content, { page: page, contextGeneration: jellyfinContextGeneration });
     }
+    function pageRoute(page) {
+        // Use a route Jellyfin can load on refresh; only Scryer reads this query.
+        return document.querySelector('main .mainAnimatedPages')
+            ? '#/home?scryer=' + page.id : page.route;
+    }
     function showPage(id, force) {
         var page = pageById(id);
-        if (!page || (!force && state.visibleId === id)) return;
-        if (window.location.hash !== page.route) history.pushState({ scryerPage: id }, page.title, page.route);
+        if (!page || (!force && state.visibleId === id && document.getElementById('scryer-page-' + id))) return;
+        var route = pageRoute(page);
+        if (window.location.hash !== route) history.pushState({ scryerPage: id }, page.title, route);
         document.querySelectorAll('.mainAnimatedPage:not(.hide)').forEach(function (active) {
             if (active.id === 'scryer-page-' + id) return;
             if (!state.previousPage) state.previousPage = active;
@@ -749,7 +765,9 @@
     }
     function isRuntimeSurface(node) {
         var element = node && node.nodeType === 1 ? node : node && node.parentElement;
-        return !!(element && element.closest && element.closest('.mainDrawer-scrollContainer, .mainAnimatedPages'));
+        var surfaces = '.mainDrawer-scrollContainer, .mainAnimatedPages, main';
+        return !!(element && ((element.closest && element.closest(surfaces)) ||
+            (element.querySelector && element.querySelector(surfaces))));
     }
     function scheduleReconcile() {
         if (state.reconcileTimer || state.disposed) return;
@@ -761,7 +779,7 @@
             }).catch(function () {});
         }, 80);
     }
-    function onNavigation() { handleNavigation(); }
+    function onNavigation() { handleNavigation(); scheduleReconcile(); }
     function onOAuthMessage(event) {
         if (event.origin !== window.location.origin || event.source !== state.oauthWindow || !event.data || event.data.type !== 'scryer-oauth-complete') return;
         clearOAuthPolling();

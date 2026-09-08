@@ -81,6 +81,11 @@ public class WebAssetsController : ControllerBase
         return Ok(new
         {
             imageBaseUrl,
+#if NET10_0_OR_GREATER
+            nativeIntegrationAvailable = true,
+#else
+            nativeIntegrationAvailable = false,
+#endif
             features = new
             {
                 discovery = config?.EnableDiscovery ?? false,

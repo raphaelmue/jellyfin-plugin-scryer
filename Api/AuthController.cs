@@ -99,7 +99,7 @@ public sealed class AuthController : ControllerBase
         // If configuration was changed during the round trip, stay on the current trusted host
         // and use only a fixed local page. The failure is available from Status.
         var basePath = Request.PathBase.HasValue ? Request.PathBase.Value : string.Empty;
-        return LocalRedirect(basePath + "/web/index.html#/scryer-discovery");
+        return LocalRedirect(basePath + "/web/index.html#/home?scryer=discovery");
     }
 
     [HttpPost("Finalize")]

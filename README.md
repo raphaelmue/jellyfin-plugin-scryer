@@ -28,6 +28,8 @@ by [RFC 153](https://github.com/scryer-media/scryer-docs/blob/main/plans/153-jel
 ## What it provides
 
 - Discovery and search backed by Scryer's catalog.
+- Jellyfin 12 native library search enriched by Scryer metadata matches.
+- Jellyfin 12 native movie and series recommendations powered by Scryer.
 - Movie, series, and anime request workflows governed by Scryer permissions.
 - A calendar of upcoming media.
 - Read-only active-download and download-history views.
@@ -42,7 +44,8 @@ configuration; it does not grant Scryer permissions.
 
 ## Requirements
 
-- Jellyfin 10.11.x with the bundled Jellyfin web client.
+- Jellyfin 12 or 10.11.x, with a separate build for each server line.
+- The bundled Jellyfin web client for Scryer pages; Modern and Legacy layouts are supported.
 - The current Scryer release, including its built-in Jellyfin plugin OAuth setup.
 - Browser-reachable HTTPS URLs for Scryer and Jellyfin. Plain HTTP is accepted only for
   loopback development; private-network HTTP for the internal Scryer connection requires
@@ -51,8 +54,31 @@ configuration; it does not grant Scryer permissions.
 - Android TV discovery requires Android TV 12/API 31 or newer because its stock image
   decoder supplies the AVIF support used by Scryer posters.
 
-Native clients other than the Android TV surface documented below, and unrelated
-third-party Jellyfin interfaces, are not part of the Alpha support target.
+Native search and recommendations use Jellyfin's server APIs and are available to clients
+that use those APIs. Scryer pages require the bundled web client; unrelated third-party web
+interfaces are not supported.
+
+### Jellyfin 12 native integration
+
+**Enhance Jellyfin library search with Scryer** adds metadata matches to normal Jellyfin
+search. Existing Jellyfin results remain available, and upstream failures fall back to
+those results. The provider resolves external IDs to existing movies and series without
+creating catalog placeholders or library rows. Jellyfin applies the user's library,
+parental-rating, and tag restrictions to the final results.
+
+**Use Scryer for More Like This and native recommendations** registers Scryer as a remote
+similarity provider for movies and series. Also enable **Scryer** in each Jellyfin library's
+similar-item providers and place it first if its recommendations should take priority.
+Jellyfin resolves the recommended external IDs to titles in that user's visible library.
+
+Both integrations require **Enable discovery** and the current user's own Scryer grant.
+No shared Scryer identity is used, and per-user recommendations never enter Jellyfin's
+shared persistent remote-provider cache. These integrations are available only in the
+Jellyfin 12 build; 10.11 retains Scryer's web pages and optional Android TV channel.
+
+Use **Discover** for titles that are not in Jellyfin yet and for adding or requesting them.
+On Modern Jellyfin, Scryer's navigation appears below the app bar; Legacy keeps the sidebar
+links. Calendar, downloads, requests, account linking, and custom-theme styles work in both.
 
 ## Install the plugin
 
@@ -75,6 +101,9 @@ are not included. Use the `main` URL above rather than a feature-branch manifest
 
 Download the plugin archive from the repository's Releases page and extract its DLL into
 a dedicated Scryer directory beneath Jellyfin's plugin directory, then restart Jellyfin.
+Each release provides a version ending in `.0` for Jellyfin 10.11 and `.1` for Jellyfin 12;
+choose the matching archive. The catalog selects the compatible package automatically.
+The higher Jellyfin 12 revision also lets it replace the 10.11 package after a server upgrade.
 The exact plugin directory is installation-specific; Docker installations normally
 persist it beneath the container's `/config/plugins` mount.
 
@@ -84,8 +113,9 @@ To build the current checkout instead:
 dotnet build -c Release --no-restore
 ```
 
-Copy `bin/Release/net9.0/Jellyfin.Plugin.Scryer.dll` into the same dedicated plugin
-directory and restart Jellyfin. The browser assets are embedded in the DLL; do not copy
+Copy `bin/Release/net10.0/Jellyfin.Plugin.Scryer.dll` for Jellyfin 12, or
+`bin/Release/net9.0/Jellyfin.Plugin.Scryer.dll` for Jellyfin 10.11, into the same dedicated
+plugin directory and restart Jellyfin. The browser assets are embedded in the DLL; do not copy
 the `Web` directory separately.
 
 ## Set up Jellyfin plugin OAuth in Scryer
@@ -331,11 +361,14 @@ installation guard.
 
 ## Development and validation
 
-No dependencies are installed by this repository. With the required .NET SDK and existing
-package cache available, build with:
+Use the .NET 10 SDK, with the .NET 9 runtime also installed for 10.11 self-tests.
+The project targets `net9.0` with Jellyfin 10.11.11 packages and `net10.0` with Jellyfin
+12.0.0 packages. With the approved package cache restored, validate both targets with:
 
 ```sh
-dotnet build --no-restore
+dotnet build -c Release --no-restore
+dotnet run --project tests/Scryer.Plugin.SelfTest -c Release -f net9.0 --no-restore
+dotnet run --project tests/Scryer.Plugin.SelfTest -c Release -f net10.0 --no-restore
 node --test Web/tests/scryer-browser-lifecycle.test.js Web/tests/scryer-runtime.test.js
 ```
 
@@ -344,13 +377,15 @@ Docker smoke test (requires Docker, curl, jq, and Python 3):
 
 ```sh
 tests/catalog-install-smoke.sh
+JELLYFIN_IMAGE=jellyfin/jellyfin:12.0 tests/catalog-install-smoke.sh
 ```
 
-The smoke test starts a clean Jellyfin 10.11.11 instance, discovers Scryer through the
+The smoke test starts a clean instance of the selected Jellyfin version, discovers Scryer through the
 public `main` manifest, installs the archive, restarts Jellyfin, and verifies that the
 plugin is active and serves the current OAuth configuration page rather than the legacy
 API-key page. Pass another manifest URL as the first argument when validating a candidate
-repository.
+repository. It retains its stopped container and local state by default. Set
+`SCRYER_EXPECT_VERSION` and `SCRYER_EXPECT_ABI` to assert catalog selection explicitly.
 
 Real-instance validation should use multiple Jellyfin users mapped to distinct Scryer
 users with different permissions. Do not test against production without separate,

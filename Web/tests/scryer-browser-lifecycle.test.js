@@ -17,7 +17,7 @@ function createCoreHarness(apiClient) {
     const diagnostics = [];
     let nextHandle = 1;
     const window = {
-        ScryerRuntime153: { version: '153.13', modules: {}, registerModule(name, version) { this.modules[name] = version; } },
+        ScryerRuntime153: { version: '153.14', modules: {}, registerModule(name, version) { this.modules[name] = version; } },
         ScryerStrings: { pages: {}, states: { requestConflict: 'This request conflicts with its current Scryer state.', internalError: 'The Scryer request could not be completed.' } },
         ApiClient: apiClient,
         addEventListener(name, listener) { listeners.set(name, listener); },

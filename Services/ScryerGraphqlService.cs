@@ -583,9 +583,9 @@ public sealed class ScryerGraphqlService : IScryerGraphqlService
         IReadOnlyList<ScryerTvDiscoveryItem> Items)
     {
         public bool Matches(IReadOnlyDictionary<string, string> providerIds) =>
-            ExternalIds.Any(externalId =>
-                providerIds.TryGetValue(externalId.Source, out var value) &&
-                string.Equals(value?.Trim(), externalId.Value, StringComparison.Ordinal));
+            ExternalIds.Any(externalId => providerIds.Any(pair =>
+                string.Equals(pair.Key, externalId.Source, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(pair.Value?.Trim(), externalId.Value, StringComparison.Ordinal)));
     }
 
     private static bool TryParseRecommendedTitles(JsonElement titles, out IReadOnlyList<RecommendedTitle> parsed)

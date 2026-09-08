@@ -11,7 +11,7 @@
                 <div class="verticalSection">
                     <h2>Scryer Plugin Settings</h2>
                     <div class="fieldDescription">
-                        This Alpha targets Jellyfin 10.11.x web clients and was tested against Scryer 0.19.7.
+                        Supports Jellyfin 12 and 10.11, including Modern and Legacy web layouts.
                         Compatibility is decided by the live preflight checks below, not by a version number.
                         Each person connects their own Scryer account; do not enter a shared Scryer API key here.
                     </div>
@@ -50,7 +50,7 @@
                     <input is="emby-input" type="text" id="ScryerCallbackUri" label="Exact OAuth callback URI" readonly="readonly" />
                     <div class="fieldDescription">Register this exact URI in the Scryer OAuth client. It is calculated from the public Jellyfin URL.</div>
                 </div>
-                <div class="verticalSection"><h3>Enabled Alpha pages</h3></div>
+                <div class="verticalSection"><h3>Enabled pages</h3></div>
                 <div class="checkboxContainer">
                     <label>
                         <input is="emby-checkbox" type="checkbox" id="EnableDiscovery" />
@@ -74,6 +74,23 @@
                         <input is="emby-checkbox" type="checkbox" id="EnableDownloads" />
                         <span>Enable downloads</span>
                     </label>
+                </div>
+                <div id="ScryerNativeFeatures" class="verticalSection hide">
+                    <h3>Jellyfin 12 integration</h3>
+                    <div class="checkboxContainer"><label>
+                        <input is="emby-checkbox" type="checkbox" id="EnableNativeSearch" />
+                        <span>Enhance Jellyfin library search with Scryer</span>
+                    </label></div>
+                    <div class="checkboxContainer"><label>
+                        <input is="emby-checkbox" type="checkbox" id="EnableNativeRecommendations" />
+                        <span>Use Scryer for More Like This and native recommendations</span>
+                    </label></div>
+                    <div class="fieldDescription">
+                        Uses each person's Scryer connection and respects their Jellyfin library access.
+                        Native results link to titles already in Jellyfin. Use Discover to find and request
+                        new titles. Both integrations require discovery to be enabled. Also enable
+                        Scryer in each library's similar-item providers; place it first to prioritize its recommendations.
+                    </div>
                 </div>
                 <div class="checkboxContainer">
                     <label>
@@ -257,6 +274,11 @@
                     document.querySelector('#EnableRequests').checked = config.EnableRequests;
                     document.querySelector('#EnableCalendar').checked = config.EnableCalendar !== false;
                     document.querySelector('#EnableDownloads').checked = config.EnableDownloads !== false;
+                    document.querySelector('#EnableNativeSearch').checked = config.EnableNativeSearch !== false;
+                    document.querySelector('#EnableNativeRecommendations').checked = config.EnableNativeRecommendations !== false;
+                    ApiClient.getJSON(ApiClient.getUrl('Scryer/Web/config')).then(function (webConfig) {
+                        document.querySelector('#ScryerNativeFeatures').classList.toggle('hide', webConfig.nativeIntegrationAvailable !== true);
+                    });
                     document.querySelector('#EnableAndroidTvChannel').checked = config.EnableAndroidTvChannel === true;
                     document.querySelector('#MaxAndroidTvRails').value = String(config.MaxAndroidTvRails > 0 ? config.MaxAndroidTvRails : 40);
                     document.querySelector('#MaxAndroidTvItemsPerRail').value = String(config.MaxAndroidTvItemsPerRail > 0 ? config.MaxAndroidTvItemsPerRail : 20);
@@ -285,6 +307,8 @@
                     config.EnableRequests = document.querySelector('#EnableRequests').checked;
                     config.EnableCalendar = document.querySelector('#EnableCalendar').checked;
                     config.EnableDownloads = document.querySelector('#EnableDownloads').checked;
+                    config.EnableNativeSearch = document.querySelector('#EnableNativeSearch').checked;
+                    config.EnableNativeRecommendations = document.querySelector('#EnableNativeRecommendations').checked;
                     config.EnableAndroidTvChannel = document.querySelector('#EnableAndroidTvChannel').checked;
                     // Clamped here as well as on the server so a hand-typed value cannot ask the
                     // plugin to store an unbounded number of rows in the Jellyfin library.

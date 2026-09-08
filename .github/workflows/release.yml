@@ -4,15 +4,6 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to release (e.g. 0.1.2.0)'
-        required: true
-      changelog:
-        description: 'Changelog for this version'
-        required: false
-        default: ''
 
 jobs:
   build-and-release:
@@ -24,60 +15,36 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: |
+            9.0.x
+            10.0.x
 
       - run: dotnet build -c Release
 
-      - name: Package plugin zip
+      - name: Validate both server builds
+        run: |
+          dotnet run --project tests/Scryer.Plugin.SelfTest -c Release -f net9.0
+          dotnet run --project tests/Scryer.Plugin.SelfTest -c Release -f net10.0 --no-restore
+          node --test Web/tests/scryer-browser-lifecycle.test.js Web/tests/scryer-runtime.test.js
+          git diff --check
+
+      - name: Package both plugin ABIs
         id: package
         run: |
-          if [ -n "${{ inputs.version }}" ]; then
-            version="${{ inputs.version }}"
-          else
-            version="${GITHUB_REF_NAME#v}"
-          fi
-          zipname="Jellyfin.Plugin.Scryer_${version}.zip"
-          mkdir -p dist
-          zip -j "dist/${zipname}" bin/Release/net9.0/Jellyfin.Plugin.Scryer.dll
-          checksum=$(md5sum "dist/${zipname}" | cut -d' ' -f1)
+          version="${GITHUB_REF_NAME#v}"
+          python3 scripts/package-release.py --version "$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "zipname=$zipname" >> "$GITHUB_OUTPUT"
-          echo "checksum=$checksum" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.package.outputs.version }}
-          files: dist/*.zip
+          files: |
+            dist/*.zip
+            dist/manifest.json
+          fail_on_unmatched_files: true
           generate_release_notes: true
 
-      - name: Update manifest.json
+      - name: Catalog publication handoff
         run: |
-          version="${{ steps.package.outputs.version }}"
-          checksum="${{ steps.package.outputs.checksum }}"
-          sourceUrl="https://github.com/${{ github.repository }}/releases/download/v${version}/${{ steps.package.outputs.zipname }}"
-          timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          changelog="${{ inputs.changelog }}"
-
-          jq --arg version "$version" \
-             --arg checksum "$checksum" \
-             --arg sourceUrl "$sourceUrl" \
-             --arg timestamp "$timestamp" \
-             --arg changelog "$changelog" \
-             '(.[0].versions) |= (
-                [{version: $version, changelog: $changelog, targetAbi: "10.11.0.0", sourceUrl: $sourceUrl, checksum: $checksum, timestamp: $timestamp}]
-                + map(select(.version != $version))
-              )' manifest.json > manifest.tmp.json
-          mv manifest.tmp.json manifest.json
-
-      - name: Commit manifest.json
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add manifest.json
-          if git diff --cached --quiet; then
-            echo "manifest.json unchanged"
-          else
-            git commit -m "Update manifest.json for v${{ steps.package.outputs.version }}"
-            git push origin HEAD:main
-          fi
+          echo 'Download the release manifest, verify both archive checksums, and publish it to main with a signed commit.' >> "$GITHUB_STEP_SUMMARY"

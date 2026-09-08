@@ -4,7 +4,8 @@ set -euo pipefail
 
 manifest_url="${1:-https://raw.githubusercontent.com/scryer-media/jellyfin-plugin-scryer/main/manifest.json}"
 jellyfin_image="${JELLYFIN_IMAGE:-jellyfin/jellyfin:10.11.11}"
-keep_container="${SCRYER_SMOKE_KEEP_CONTAINER:-0}"
+keep_container="${SCRYER_SMOKE_KEEP_CONTAINER:-1}"
+leave_running="${SCRYER_SMOKE_LEAVE_RUNNING:-0}"
 test_root="$(mktemp -d /tmp/scryer-catalog-smoke.XXXXXX)"
 container_name="scryer-catalog-smoke-$$"
 admin_name="catalogadmin"
@@ -13,6 +14,10 @@ admin_password="CatalogSmokeOnly!2026"
 mkdir -p "${test_root}/config" "${test_root}/cache"
 
 cleanup() {
+  if [[ "${leave_running}" == "1" ]]; then
+    printf "Retained running fixture %s at %s (%s)\n" "${container_name}" "${base_url}" "${test_root}"
+    return
+  fi
   docker stop "${container_name}" >/dev/null 2>&1 || true
   if [[ "${keep_container}" == "1" ]]; then
     printf 'Retained stopped container %s and fixture %s\n' "${container_name}" "${test_root}"
@@ -57,7 +62,7 @@ authenticate() {
     response="$(
       curl -sS -X POST "${base_url}/Users/AuthenticateByName" \
         -H 'Content-Type: application/json' \
-        -H 'X-Emby-Authorization: MediaBrowser Client="ScryerCatalogSmoke", Device="Local", DeviceId="scryer-catalog-smoke", Version="1.0"' \
+        -H 'Authorization: MediaBrowser Client="ScryerCatalogSmoke", Device="Local", DeviceId="scryer-catalog-smoke", Version="1.0"' \
         --data-binary "{\"Username\":\"${admin_name}\",\"Pw\":\"${admin_password}\"}" \
         2>/dev/null || true
     )"
@@ -98,27 +103,30 @@ curl -fsS -X POST "${base_url}/Startup/RemoteAccess" \
 curl -fsS -X POST "${base_url}/Startup/Complete" >/dev/null
 
 token="$(authenticate "${base_url}")"
-repositories="$(curl -fsS "${base_url}/Repositories" -H "X-Emby-Token: ${token}")"
+repositories="$(curl -fsS "${base_url}/Repositories" -H "Authorization: MediaBrowser Client=\"ScryerCatalogSmoke\", Device=\"Local\", DeviceId=\"scryer-catalog-smoke\", Version=\"1.0\", Token=\"${token}\"")"
 repositories="$(
   printf '%s' "${repositories}" | jq \
     --arg url "${manifest_url}" \
     '. + [{Name:"Scryer", Url:$url, Enabled:true}] | unique_by(.Url)'
 )"
 curl -fsS -X POST "${base_url}/Repositories" \
-  -H "X-Emby-Token: ${token}" \
+  -H "Authorization: MediaBrowser Client=\"ScryerCatalogSmoke\", Device=\"Local\", DeviceId=\"scryer-catalog-smoke\", Version=\"1.0\", Token=\"${token}\"" \
   -H 'Content-Type: application/json' \
   --data-binary "${repositories}" >/dev/null
 
-catalog="$(curl -fsS "${base_url}/Packages" -H "X-Emby-Token: ${token}")"
+catalog="$(curl -fsS "${base_url}/Packages" -H "Authorization: MediaBrowser Client=\"ScryerCatalogSmoke\", Device=\"Local\", DeviceId=\"scryer-catalog-smoke\", Version=\"1.0\", Token=\"${token}\"")"
 package="$(printf '%s' "${catalog}" | jq -ce '.[] | select((.name // "") == "Scryer")')"
 guid="$(printf '%s' "${package}" | jq -r '.guid')"
 version="$(printf '%s' "${package}" | jq -r '.versions[0].version')"
 target_abi="$(printf '%s' "${package}" | jq -r '.versions[0].targetAbi')"
 
+[[ -z "${SCRYER_EXPECT_VERSION:-}" || "${version}" == "${SCRYER_EXPECT_VERSION}" ]]
+[[ -z "${SCRYER_EXPECT_ABI:-}" || "${target_abi}" == "${SCRYER_EXPECT_ABI}" ]]
+
 printf 'Catalog found Scryer %s for Jellyfin ABI %s\n' "${version}" "${target_abi}"
 
 curl -fsS --get -X POST "${base_url}/Packages/Installed/Scryer" \
-  -H "X-Emby-Token: ${token}" \
+  -H "Authorization: MediaBrowser Client=\"ScryerCatalogSmoke\", Device=\"Local\", DeviceId=\"scryer-catalog-smoke\", Version=\"1.0\", Token=\"${token}\"" \
   --data-urlencode "assemblyGuid=${guid}" \
   --data-urlencode "version=${version}" \
   --data-urlencode "repositoryUrl=${manifest_url}" >/dev/null
@@ -139,16 +147,21 @@ sleep 2
 wait_for_status "${base_url}/System/Info/Public" 200
 
 token="$(authenticate "${base_url}")"
-plugins="$(curl -fsS "${base_url}/Plugins" -H "X-Emby-Token: ${token}")"
-pages="$(curl -fsS "${base_url}/Web/ConfigurationPages" -H "X-Emby-Token: ${token}")"
-configuration_page="$(curl -fsS "${base_url}/web/ConfigurationPage?name=Scryer" -H "X-Emby-Token: ${token}")"
+plugins="$(curl -fsS "${base_url}/Plugins" -H "Authorization: MediaBrowser Client=\"ScryerCatalogSmoke\", Device=\"Local\", DeviceId=\"scryer-catalog-smoke\", Version=\"1.0\", Token=\"${token}\"")"
+pages="$(curl -fsS "${base_url}/Web/ConfigurationPages" -H "Authorization: MediaBrowser Client=\"ScryerCatalogSmoke\", Device=\"Local\", DeviceId=\"scryer-catalog-smoke\", Version=\"1.0\", Token=\"${token}\"")"
+configuration_page="$(curl -fsS "${base_url}/web/ConfigurationPage?name=Scryer" -H "Authorization: MediaBrowser Client=\"ScryerCatalogSmoke\", Device=\"Local\", DeviceId=\"scryer-catalog-smoke\", Version=\"1.0\", Token=\"${token}\"")"
 
 printf '%s' "${plugins}" | jq -e \
   --arg version "${version}" \
   '.[] | select(.Name == "Scryer" and .Version == $version and .Status == "Active")' >/dev/null
 printf '%s' "${pages}" | jq -e \
   '.[] | select(.Name == "Scryer" and .DisplayName == "Scryer")' >/dev/null
+[[ "${configuration_page}" == *'id="EnableNativeSearch"'* ]]
 [[ "${configuration_page}" == *'id="OAuthClientId"'* ]]
+index_html="$(curl -fsS "${base_url}/web/index.html")"
+[[ "${index_html}" == *'data-scryer-loader="153.14"'* ]]
+web_config="$(curl -fsS "${base_url}/Scryer/Web/config")"
+printf '%s' "${web_config}" | jq -e --arg abi "${target_abi}" '.nativeIntegrationAvailable == ($abi == "12.0.0.0")' >/dev/null
 [[ "${configuration_page}" == *'id="ScryerInternalBaseUrl"'* ]]
 [[ "${configuration_page}" != *'id="ScryerApiKey"'* ]]
 logs="$(docker logs "${container_name}" 2>&1)"

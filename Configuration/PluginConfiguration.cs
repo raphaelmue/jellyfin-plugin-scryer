@@ -50,6 +50,12 @@ public class PluginConfiguration : BasePluginConfiguration
 
     public bool EnableDownloads { get; set; } = true;
 
+    /// <summary>Use Scryer to supplement native Jellyfin 12 library search.</summary>
+    public bool EnableNativeSearch { get; set; } = true;
+
+    /// <summary>Use Scryer for native Jellyfin 12 movie and series recommendations.</summary>
+    public bool EnableNativeRecommendations { get; set; } = true;
+
     /// <summary>
     /// Opt-in for the native Android TV discovery channel. It is off by default because
     /// Jellyfin persists channel items into its own library database, one set of rows per user.

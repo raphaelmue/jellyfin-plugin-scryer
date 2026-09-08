@@ -38,6 +38,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 var tests = new (string Name, Func<Task> Run)[]
 {
+#if NET10_0_OR_GREATER
+    ("native search preserves Jellyfin results and scopes Scryer matches to the caller", NativeIntegrationTests.SearchAsync),
+    ("native recommendations isolate users and avoid shared provider caches", NativeIntegrationTests.RecommendationsAsync),
+#endif
     ("trusted Jellyfin actor canonicalizes and rejects ambiguity", TrustedActorAsync),
     ("configuration derives only the exact callback", ConfigurationAsync),
     ("OAuth metadata enforces the fixed contract", MetadataAsync),
@@ -202,7 +206,7 @@ static Task WebInjectionPreservesBytesAsync()
     Assert.True(result.Injected);
     Assert.True(result.Content.AsSpan(0, prefix.Length).SequenceEqual(prefix));
     Assert.True(result.Content.AsSpan(result.Content.Length - suffix.Length).SequenceEqual(suffix));
-    Assert.Contains("data-scryer-loader=\"153.13\"", Encoding.ASCII.GetString(result.Content));
+    Assert.Contains($"data-scryer-loader=\"{HtmlScriptInjector.LoaderVersion}\"", Encoding.ASCII.GetString(result.Content));
 
     var secondPass = HtmlScriptInjector.Inject(result.Content);
     Assert.True(secondPass.AlreadyPresent);
@@ -571,7 +575,7 @@ static async Task AndroidTvDiscoveryAsync()
     var sharedService = new ScryerGraphqlService(new FixedConfigurationProvider(ValidOAuthConfiguration()), new TokenSession(), sharedHandler);
     var shared = await sharedService.GetAndroidTvDiscoveryAsync("0123456789abcdef0123456789abcdef", new[]
     {
-        new ScryerRecommendationSeed("A", "MOVIE", new Dictionary<string, string> { ["tmdb"] = "1" }),
+        new ScryerRecommendationSeed("A", "MOVIE", new Dictionary<string, string> { ["Tmdb"] = "1" }),
         new ScryerRecommendationSeed("B", "MOVIE", new Dictionary<string, string> { ["tmdb"] = "2" }),
         new ScryerRecommendationSeed("A again", "MOVIE", new Dictionary<string, string> { ["tmdb"] = "1" }),
     }, CancellationToken.None);
@@ -1591,10 +1595,13 @@ static async Task OAuthFlowBindingAsync()
         Assert.False(consumedByWrongUser.IsSuccess);
         Assert.Equal(ScryerFailureCode.AuthorizationExpired, consumedByWrongUser.Failure!.Code);
 
-        var successful = await flow.StartAsync("user-c", "#/scryer-requests", CancellationToken.None);
+        var unsafeReturn = await flow.StartAsync("user-c", "#/home?scryer=requests&redirect=https://example.test", CancellationToken.None);
+        Assert.False(unsafeReturn.IsSuccess);
+        var successful = await flow.StartAsync("user-c", "#/home?scryer=requests", CancellationToken.None);
         var successfulState = QueryValue(successful.Value!.AuthorizationUri, "state");
         var successfulStage = await flow.StageCallbackAsync(successfulState, successful.Value.CookieValue, "third-code", null, CancellationToken.None);
         Assert.True(successfulStage.Success, successfulStage.Failure?.Code.ToString());
+        Assert.Equal("#/home?scryer=requests", successfulStage.RedirectUri!.Fragment);
         var finalized = await flow.FinalizeAsync("user-c", successfulStage.FinalizeCookieValue, CancellationToken.None);
         Assert.True(finalized.IsSuccess, finalized.Failure?.Code.ToString());
         Assert.Equal(1, session.ConnectCalls);

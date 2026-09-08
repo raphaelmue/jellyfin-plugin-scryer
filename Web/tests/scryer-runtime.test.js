@@ -6,10 +6,10 @@ const vm = require('node:vm');
 
 const webRoot = path.resolve(__dirname, '..');
 
-function loadCore(apiClient) {
+function loadCore(apiClient, documentOverride) {
     const listeners = new Map();
     const window = {
-        ScryerRuntime153: { version: '153.13', modules: {}, registerModule(name, version) { this.modules[name] = version; } },
+        ScryerRuntime153: { version: '153.14', modules: {}, registerModule(name, version) { this.modules[name] = version; } },
         ApiClient: apiClient,
         addEventListener(name, listener) { listeners.set(name, listener); },
         removeEventListener(name) { listeners.delete(name); },
@@ -19,7 +19,7 @@ function loadCore(apiClient) {
         clearTimeout() {},
         location: { origin: 'https://jellyfin.test', href: 'https://jellyfin.test/web/index.html', hash: '' }
     };
-    const document = {
+    const document = documentOverride || {
         body: {},
         querySelector() { return null; },
         querySelectorAll() { return []; }
@@ -29,6 +29,42 @@ function loadCore(apiClient) {
     });
     return window.Scryer;
 }
+
+test('Modern navigation takes precedence over the hidden Legacy drawer and is idempotent', () => {
+    let section;
+    let insertions = 0;
+    const main = {
+        querySelector(selector) { return selector === '.scryerSection' ? section : null; },
+        insertBefore(element, before) { assert.equal(before, pages); section = element; insertions++; }
+    };
+    const pages = { parentElement: main };
+    const legacy = { querySelector() { throw new Error('Must not use the hidden Legacy drawer'); } };
+    const document = {
+        body: {},
+        querySelector(selector) { return selector === 'main .mainAnimatedPages' ? pages : selector === '.mainDrawer-scrollContainer' ? legacy : null; },
+        querySelectorAll() { return []; },
+        createElement(tag) { assert.equal(tag, 'nav'); return { setAttribute(name, value) { this[name] = value; } }; }
+    };
+    const Scryer = loadCore(null, document);
+    assert.equal(Scryer._testing.ensureSection(), Scryer._testing.ensureSection());
+    assert.equal(insertions, 1);
+    assert.equal(section['aria-label'], 'Scryer');
+    assert.match(section.className, /scryerModernNav/);
+    for (const page of Scryer.PAGES) {
+        const route = Scryer._testing.pageRoute(page);
+        assert.equal(route, '#/home?scryer=' + page.id);
+        assert.equal(Scryer._testing.pageByRoute(route), page);
+    }
+    assert.equal(Scryer._testing.pageByRoute('#/home?scryer=unknown'), null);
+    assert.equal(Scryer._testing.pageByRoute('#/home?scryer=discovery&redirect=evil'), null);
+});
+
+test('Legacy navigation retains its routes and React page replacement triggers reconciliation', () => {
+    const Scryer = loadCore();
+    for (const page of Scryer.PAGES) assert.equal(Scryer._testing.pageRoute(page), page.route);
+    assert.equal(Scryer._testing.isRuntimeSurface({ nodeType: 1, closest() { return null; }, querySelector() { return {}; } }), true);
+    assert.equal(Scryer._testing.isRuntimeSurface({ nodeType: 1, closest() { return null; }, querySelector() { return null; } }), false);
+});
 
 test('lifecycle has one mount per feature and disposes owned listeners', () => {
     const Scryer = loadCore();

@@ -2,7 +2,7 @@
 name: "Scryer"
 guid: "6a9c9f2e-6b2f-4a1a-9d3d-2c7f2f5b3d10"
 imageUrl: "https://raw.githubusercontent.com/scryer-media/jellyfin-plugin-scryer/main/artwork/scryer-plugin.png"
-version: "0.1.23.0"
+version: "0.1.24.0"
 targetAbi: "10.11.0.0"
 framework: "net9.0"
 overview: "Requests, discovery, and calendar pages for Jellyfin, backed by Scryer."
@@ -15,9 +15,7 @@ owner: "scryer-media"
 artifacts:
   - Jellyfin.Plugin.Scryer.dll
 changelog: >
-  Fixes the Android TV Favorite action still sending an anime recommendation to the series
-  library after 0.1.22.0. Traced on a live server: Scryer now reports the row as anime with its
-  matched ids, but Jellyfin copies a channel row's provider ids only when it first creates the
-  row, so a title already published as a plain series kept its old kind and had no stored ids no
-  matter how often the channel refreshed. Title row ids now cover the kind and the stored ids, so
-  a changed title is republished as a new row and the stale one is retired.
+  Adds Jellyfin 12 native library search and movie/series recommendations with per-user
+  access controls, plus Modern web navigation. Retains Jellyfin 10.11 support through
+  a separate .NET 9 package. Improves OAuth return navigation and recommendation ID matching.
+  Enable Scryer in each library's similar-item providers to use native recommendations.

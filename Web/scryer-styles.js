@@ -8,6 +8,12 @@
     'use strict';
 
     var STYLE = '' +
+        '.scryerModernNav{display:flex;align-items:center;flex-wrap:wrap;gap:.5em;padding:.6em 1em;border-bottom:1px solid currentColor}' +
+        '.scryerModernNav .sidebarHeader{margin:0 1em 0 0;font-size:1em}' +
+        '.scryerModernNav .navMenuOption{display:inline-flex;align-items:center;gap:.4em;width:auto;padding:.65em;border-radius:.4em;color:inherit;text-decoration:none}' +
+        '.scryerModernNav .navMenuOption:hover,.scryerModernNav .navMenuOption:focus-visible{background:rgba(128,128,128,.2)}' +
+        '.scryerPageActive main .mainAnimatedPages~.skinBody{display:none!important}' +
+        'main .scryer-runtime-owned.libraryPage{position:relative;padding:1em!important}' +
         '.scryerCategory{margin-top:2em}' +
         '.scryerCategoryTitle{margin:0 0 .65em;font-size:1.15em;font-weight:600}' +
         '.scryerCarousel{position:relative}' +
