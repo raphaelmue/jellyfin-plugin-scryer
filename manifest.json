@@ -9,6 +9,22 @@
     "imageUrl": "https://raw.githubusercontent.com/scryer-media/jellyfin-plugin-scryer/main/artwork/scryer-plugin.png",
     "versions": [
       {
+        "version": "0.1.24.1",
+        "changelog": "Adds Jellyfin 12 native library search and movie/series recommendations with per-user access controls, plus Modern web navigation. Retains Jellyfin 10.11 support through a separate .NET 9 package. Improves OAuth return navigation and recommendation ID matching. Enable Scryer in each library's similar-item providers to use native recommendations.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/scryer-media/jellyfin-plugin-scryer/releases/download/v0.1.24.0/Jellyfin.Plugin.Scryer_0.1.24.1.zip",
+        "checksum": "0095b3116afd0dd83fb2892f326fa393",
+        "timestamp": "2026-09-08T20:16:08Z"
+      },
+      {
+        "version": "0.1.24.0",
+        "changelog": "Adds Jellyfin 12 native library search and movie/series recommendations with per-user access controls, plus Modern web navigation. Retains Jellyfin 10.11 support through a separate .NET 9 package. Improves OAuth return navigation and recommendation ID matching. Enable Scryer in each library's similar-item providers to use native recommendations.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/scryer-media/jellyfin-plugin-scryer/releases/download/v0.1.24.0/Jellyfin.Plugin.Scryer_0.1.24.0.zip",
+        "checksum": "4f4bcec3b199839b16dab608659fbc16",
+        "timestamp": "2026-09-08T20:16:08Z"
+      },
+      {
         "version": "0.1.23.0",
         "changelog": "",
         "targetAbi": "10.11.0.0",
