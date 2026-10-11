@@ -13,6 +13,7 @@
         '.scryerModernNav .navMenuOption{display:inline-flex;align-items:center;gap:.4em;width:auto;padding:.65em;border-radius:.4em;color:inherit;text-decoration:none}' +
         '.scryerModernNav .navMenuOption:hover,.scryerModernNav .navMenuOption:focus-visible{background:rgba(128,128,128,.2)}' +
         '.scryerToolbarNav{display:contents}' +
+        '.scryerToolbarNav>a{margin-left:4px}' +
         '.scryerToolbarNav .scryerToolbarButton{display:inline-flex;align-items:center;gap:.4em;margin-left:.25em;padding:6px 8px;border-radius:4px;color:inherit;text-decoration:none;font:inherit;font-weight:500;white-space:nowrap;cursor:pointer;position:relative;z-index:1}' +
         '.scryerToolbarNav .scryerToolbarButton:hover,.scryerToolbarNav .scryerToolbarButton:focus-visible{background:rgba(128,128,128,.2)}' +
         '.scryerToolbarNav .sidebarHeader{display:none}' +

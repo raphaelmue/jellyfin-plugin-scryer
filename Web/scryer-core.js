@@ -664,6 +664,18 @@
         }), scope.guard(function (error) { renderConnectionState(container, codeToConnectionState(error.code), scope, page, error.message); }));
     };
 
+    function toolbarButtonTemplate(section) {
+        var stack = section.parentElement;
+        var buttons = stack && stack.querySelectorAll ? stack.querySelectorAll('a.MuiButton-root') : [];
+        for (var i = 0; i < buttons.length; i++) {
+            var button = buttons[i];
+            if (/scryer-nav-/.test(button.className) || !/MuiButton-colorInherit/.test(button.className)) continue;
+            var icon = button.querySelector('.MuiButton-startIcon');
+            var svg = icon && icon.querySelector('svg');
+            if (icon && svg) return { className: button.className, iconClass: icon.getAttribute('class'), svgClass: svg.getAttribute('class') };
+        }
+        return null;
+    }
     function findToolbarStack() {
         var favorites = document.querySelector('.MuiToolbar-root a[href="#/home?tab=1"]');
         if (favorites && favorites.parentElement) return favorites.parentElement;
@@ -729,7 +741,12 @@
             var inToolbar = section.classList && section.classList.contains('scryerToolbarNav');
             if (!inToolbar) link.setAttribute('is', 'emby-linkbutton');
             link.className = (inToolbar ? 'scryerToolbarButton ' : 'navMenuOption lnkMediaFolder emby-button ') + 'scryer-nav-' + page.id; link.href = pageRoute(page);
-            link.innerHTML = '<svg class="navMenuOptionIcon scryerNavIcon" viewBox="0 0 24 24" width="24" height="24" focusable="false" aria-hidden="true"><path fill="currentColor" d="' + page.iconPath + '"></path></svg><span class="sectionName navMenuOptionText">' + escapeHtml(page.title) + '</span>';
+            var template = inToolbar ? toolbarButtonTemplate(section) : null;
+            if (template) {
+                // Reuse the sibling MUI button's classes (and its theme overrides) so ours matches exactly.
+                link.className = template.className + ' scryer-nav-' + page.id;
+                link.innerHTML = '<span class="' + template.iconClass + '"><svg class="' + template.svgClass + '" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="' + page.iconPath + '"></path></svg></span>' + escapeHtml(page.title);
+            } else link.innerHTML = '<svg class="navMenuOptionIcon scryerNavIcon" viewBox="0 0 24 24" width="24" height="24" focusable="false" aria-hidden="true"><path fill="currentColor" d="' + page.iconPath + '"></path></svg><span class="sectionName navMenuOptionText">' + escapeHtml(page.title) + '</span>';
             link.addEventListener('click', function (event) {
                 event.preventDefault();
                 event.stopImmediatePropagation();
