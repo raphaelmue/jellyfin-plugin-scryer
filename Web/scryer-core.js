@@ -664,12 +664,32 @@
         }), scope.guard(function (error) { renderConnectionState(container, codeToConnectionState(error.code), scope, page, error.message); }));
     };
 
+    function findToolbarStack() {
+        var favorites = document.querySelector('.MuiToolbar-root a[href="#/home?tab=1"]');
+        if (favorites && favorites.parentElement) return favorites.parentElement;
+        var stack = document.querySelector('.MuiToolbar-root > .MuiStack-root');
+        return stack && stack.querySelector('a, button') ? stack : null;
+    }
     function ensureSection() {
         if (/^#\/(?:dashboard(?:\/|\?|$)|configurationpage(?:\?|$))/.test(window.location.hash)) return null;
         var sidebar = document.querySelector('.mainDrawer-scrollContainer');
         // Modern Jellyfin uses React pages and has no desktop drawer. Keep our
         // navigation beside its page container, outside React's rendered page.
         var modernPages = document.querySelector('main .mainAnimatedPages');
+        // Jellyfin 12's top toolbar holds the Favorites and library buttons in a Stack when no
+        // drawer is shown. Join them there; the Favorites link locates the stack without
+        // relying on generated emotion class names.
+        var toolbarStack = PAGES.length ? findToolbarStack() : null;
+        if (toolbarStack) {
+            var toolbarSection = toolbarStack.querySelector('.scryerSection');
+            if (!toolbarSection) {
+                toolbarSection = document.createElement('nav');
+                toolbarSection.setAttribute('aria-label', 'Scryer');
+                toolbarSection.className = 'scryerSection scryerToolbarNav';
+                toolbarStack.appendChild(toolbarSection);
+            }
+            return toolbarSection;
+        }
         // Prefer the real navigation drawer (Home, Favorites, Libraries) so the entries are
         // clickable and look native; the page-level bar below is only a fallback.
         var drawerList = PAGES.length ? document.querySelector('.MuiDrawer-root .MuiList-root') : null;
@@ -701,10 +721,14 @@
         if (!state.featureConfigReady) return;
         var section = ensureSection();
         if (!section) return;
+        // The toolbar can render after an earlier fallback placement; keep a single nav.
+        if (document.querySelectorAll) document.querySelectorAll('.scryerSection').forEach(function (other) { if (other !== section) other.remove(); });
         PAGES.forEach(function (page) {
             if (section.querySelector('.scryer-nav-' + page.id)) return;
             var link = document.createElement('a');
-            link.setAttribute('is', 'emby-linkbutton'); link.className = 'navMenuOption lnkMediaFolder emby-button scryer-nav-' + page.id; link.href = pageRoute(page);
+            var inToolbar = section.classList && section.classList.contains('scryerToolbarNav');
+            if (!inToolbar) link.setAttribute('is', 'emby-linkbutton');
+            link.className = (inToolbar ? 'scryerToolbarButton ' : 'navMenuOption lnkMediaFolder emby-button ') + 'scryer-nav-' + page.id; link.href = pageRoute(page);
             link.innerHTML = '<svg class="navMenuOptionIcon scryerNavIcon" viewBox="0 0 24 24" width="24" height="24" focusable="false" aria-hidden="true"><path fill="currentColor" d="' + page.iconPath + '"></path></svg><span class="sectionName navMenuOptionText">' + escapeHtml(page.title) + '</span>';
             link.addEventListener('click', function (event) {
                 event.preventDefault();
@@ -779,7 +803,7 @@
     }
     function isRuntimeSurface(node) {
         var element = node && node.nodeType === 1 ? node : node && node.parentElement;
-        var surfaces = '.mainDrawer-scrollContainer, .MuiDrawer-root, .mainAnimatedPages, main';
+        var surfaces = '.mainDrawer-scrollContainer, .MuiToolbar-root, .MuiDrawer-root, .mainAnimatedPages, main';
         return !!(element && ((element.closest && element.closest(surfaces)) ||
             (element.querySelector && element.querySelector(surfaces))));
     }
