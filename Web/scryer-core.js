@@ -670,6 +670,20 @@
         // Modern Jellyfin uses React pages and has no desktop drawer. Keep our
         // navigation beside its page container, outside React's rendered page.
         var modernPages = document.querySelector('main .mainAnimatedPages');
+        // Prefer the real navigation drawer (Home, Favorites, Libraries) so the entries are
+        // clickable and look native; the page-level bar below is only a fallback.
+        var drawerList = PAGES.length ? document.querySelector('.MuiDrawer-root .MuiList-root') : null;
+        if (drawerList && drawerList.parentElement) {
+            var drawer = drawerList.parentElement;
+            var drawerSection = drawer.querySelector('.scryerSection');
+            if (!drawerSection) {
+                drawerSection = document.createElement('nav');
+                drawerSection.setAttribute('aria-label', 'Scryer');
+                drawerSection.className = 'scryerSection scryerDrawerNav';
+                drawer.insertBefore(drawerSection, drawerList.nextSibling);
+            }
+            return drawerSection;
+        }
         if (modernPages) sidebar = modernPages.parentElement;
         if (!sidebar || !PAGES.length) return null;
         var section = sidebar.querySelector('.scryerSection');
@@ -765,7 +779,7 @@
     }
     function isRuntimeSurface(node) {
         var element = node && node.nodeType === 1 ? node : node && node.parentElement;
-        var surfaces = '.mainDrawer-scrollContainer, .mainAnimatedPages, main';
+        var surfaces = '.mainDrawer-scrollContainer, .MuiDrawer-root, .mainAnimatedPages, main';
         return !!(element && ((element.closest && element.closest(surfaces)) ||
             (element.querySelector && element.querySelector(surfaces))));
     }

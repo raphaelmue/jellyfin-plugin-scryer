@@ -26,7 +26,7 @@ public sealed class ScryerConnectionDiagnostics : IDisposable
     /// reads or compares a Scryer version number, so this must never be reported as a requirement.
     /// Compatibility is decided solely by the OAuth metadata and GraphQL contract probes below.
     /// </summary>
-    public const string MinimumScryerVersion = "0.19.7";
+    public const string MinimumScryerVersion = "0.21.13";
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(5);
     private const int MaximumGraphQlProbeRequestBytes = 8 * 1024;
     private const int MaximumGraphQlProbeResponseBytes = 128 * 1024;

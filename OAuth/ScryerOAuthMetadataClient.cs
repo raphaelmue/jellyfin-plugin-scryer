@@ -265,12 +265,9 @@ public sealed class ScryerOAuthMetadataClient
 
     private static ScryerResult<ScryerOAuthMetadata> ParseMetadata(JsonElement root, ScryerOAuthConfiguration configuration)
     {
-        var internalAuthorization = BuildEndpoint(configuration.InternalAuthority, "oauth/authorize");
         var internalToken = BuildEndpoint(configuration.InternalAuthority, "oauth/token");
         var internalRevocation = BuildEndpoint(configuration.InternalAuthority, "oauth/revoke");
         var publicAuthorization = BuildEndpoint(configuration.PublicAuthority, "oauth/authorize");
-        var publicToken = BuildEndpoint(configuration.PublicAuthority, "oauth/token");
-        var publicRevocation = BuildEndpoint(configuration.PublicAuthority, "oauth/revoke");
         if (!HasString(root, "response_types_supported", "code") ||
             !HasString(root, "grant_types_supported", "authorization_code") ||
             !HasString(root, "grant_types_supported", "refresh_token") ||
@@ -284,34 +281,12 @@ public sealed class ScryerOAuthMetadataClient
             !TryReadEndpoint(root, "revocation_endpoint", out var advertisedRevocation) ||
             !TryReadEndpoint(root, "issuer", out var advertisedIssuer) ||
             advertisedIssuer.AbsolutePath != "/" ||
-            !(MatchesMetadataSet(
-                    advertisedIssuer,
-                    advertisedAuthorization,
-                    advertisedToken,
-                    advertisedRevocation,
-                    configuration.InternalAuthority,
-                    internalAuthorization,
-                    internalToken,
-                    internalRevocation) ||
-                MatchesMetadataSet(
-                    advertisedIssuer,
-                    advertisedAuthorization,
-                    advertisedToken,
-                    advertisedRevocation,
-                    configuration.PublicAuthority,
-                    publicAuthorization,
-                    publicToken,
-                    publicRevocation) ||
-                (SameOrigin(advertisedIssuer, configuration.PublicAuthority) &&
-                    MatchesMetadataSet(
-                        advertisedIssuer,
-                        advertisedAuthorization,
-                        advertisedToken,
-                        advertisedRevocation,
-                        advertisedIssuer,
-                        BuildEndpoint(advertisedIssuer, "oauth/authorize"),
-                        BuildEndpoint(advertisedIssuer, "oauth/token"),
-                        BuildEndpoint(advertisedIssuer, "oauth/revoke")))))
+            !SameOrigin(advertisedIssuer, advertisedAuthorization) ||
+            !SameOrigin(advertisedIssuer, advertisedToken) ||
+            !SameOrigin(advertisedIssuer, advertisedRevocation) ||
+            !HasEndpointSuffix(advertisedAuthorization, "/oauth/authorize") ||
+            !HasEndpointSuffix(advertisedToken, "/oauth/token") ||
+            !HasEndpointSuffix(advertisedRevocation, "/oauth/revoke"))
         {
             return ScryerResult<ScryerOAuthMetadata>.Fail(ScryerFailure.Incompatible);
         }
@@ -413,22 +388,12 @@ public sealed class ScryerOAuthMetadataClient
         return true;
     }
 
-    private static bool MatchesExpectedEndpoint(Uri advertised, Uri expected) =>
-        SameOrigin(advertised, expected) && string.Equals(advertised.AbsolutePath, expected.AbsolutePath, StringComparison.Ordinal);
-
-    private static bool MatchesMetadataSet(
-        Uri issuer,
-        Uri authorization,
-        Uri token,
-        Uri revocation,
-        Uri configuredAuthority,
-        Uri expectedAuthorization,
-        Uri expectedToken,
-        Uri expectedRevocation) =>
-        SameOrigin(issuer, configuredAuthority) &&
-        MatchesExpectedEndpoint(authorization, expectedAuthorization) &&
-        MatchesExpectedEndpoint(token, expectedToken) &&
-        MatchesExpectedEndpoint(revocation, expectedRevocation);
+    // Scryer derives its issuer from SCRYER_PUBLIC_URL or the request Host/X-Forwarded-Proto,
+    // so behind a proxy it can legitimately differ from either configured authority. The
+    // metadata only needs to be self-consistent: credential-bearing requests never use the
+    // advertised token/revocation endpoints, they use fixed paths on the configured authority.
+    private static bool HasEndpointSuffix(Uri endpoint, string suffix) =>
+        endpoint.AbsolutePath.EndsWith(suffix, StringComparison.Ordinal);
 
     private static bool SameOrigin(Uri left, Uri right) =>
         string.Equals(left.Scheme, right.Scheme, StringComparison.OrdinalIgnoreCase) &&

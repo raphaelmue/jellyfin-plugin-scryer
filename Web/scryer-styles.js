@@ -12,6 +12,9 @@
         '.scryerModernNav .sidebarHeader{margin:0 1em 0 0;font-size:1em}' +
         '.scryerModernNav .navMenuOption{display:inline-flex;align-items:center;gap:.4em;width:auto;padding:.65em;border-radius:.4em;color:inherit;text-decoration:none}' +
         '.scryerModernNav .navMenuOption:hover,.scryerModernNav .navMenuOption:focus-visible{background:rgba(128,128,128,.2)}' +
+        '.scryerDrawerNav{padding:.5em 0}' +
+        '.scryerDrawerNav .navMenuOption{display:flex;align-items:center;gap:1em;width:100%;box-sizing:border-box;padding:.75em 1.5em;color:inherit;text-decoration:none;cursor:pointer;position:relative;z-index:1}' +
+        '.scryerDrawerNav .navMenuOption:hover,.scryerDrawerNav .navMenuOption:focus-visible{background:rgba(128,128,128,.2)}' +
         '.scryerPageActive main .mainAnimatedPages~.skinBody{display:none!important}' +
         'main .scryer-runtime-owned.libraryPage{position:relative;padding:1em!important}' +
         '.scryerCategory{margin-top:2em}' +
