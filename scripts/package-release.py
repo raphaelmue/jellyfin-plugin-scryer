@@ -46,7 +46,7 @@ def package(version, output):
             zipped.writestr(info, data)
         checksum = hashlib.md5(archive.read_bytes()).hexdigest()
         entries.append(dict(version=number, changelog=changelog, targetAbi=abi,
-                            sourceUrl=f"https://github.com/scryer-media/jellyfin-plugin-scryer/releases/download/v{version}/{archive.name}",
+                            sourceUrl=f"https://github.com/raphaelmue/jellyfin-plugin-scryer/releases/download/v{version}/{archive.name}",
                             checksum=checksum, timestamp=timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")))
         print(f"{number} {abi} {checksum} {archive.name}")
     plugin["versions"] = entries + plugin["versions"]
