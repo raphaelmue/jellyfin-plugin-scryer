@@ -9,6 +9,22 @@
     "imageUrl": "https://raw.githubusercontent.com/scryer-media/jellyfin-plugin-scryer/main/artwork/scryer-plugin.png",
     "versions": [
       {
+        "version": "0.1.27.1",
+        "changelog": "Scryer toolbar buttons now reuse the styling of the native Jellyfin toolbar buttons.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/raphaelmue/jellyfin-plugin-scryer/releases/download/v0.1.27.0/Jellyfin.Plugin.Scryer_0.1.27.1.zip",
+        "checksum": "f1daacdfe8f9af7743dc51f60be311b7",
+        "timestamp": "2026-10-11T13:23:19Z"
+      },
+      {
+        "version": "0.1.27.0",
+        "changelog": "Scryer toolbar buttons now reuse the styling of the native Jellyfin toolbar buttons.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/raphaelmue/jellyfin-plugin-scryer/releases/download/v0.1.27.0/Jellyfin.Plugin.Scryer_0.1.27.0.zip",
+        "checksum": "abd50327910788aff6c52cedade5399e",
+        "timestamp": "2026-10-11T13:23:19Z"
+      },
+      {
         "version": "0.1.26.1",
         "changelog": "Adds the Scryer pages to the Jellyfin 12 top toolbar next to Favorites and the libraries, so they are clickable. Fixes the OAuth compatibility check against Scryer 0.21 behind a reverse proxy.",
         "targetAbi": "12.0.0.0",
