@@ -13,7 +13,7 @@
         "changelog": "Hides the Scryer navigation bar in the fullscreen player and styles the drawer buttons like the native Jellyfin ones.",
         "targetAbi": "12.0.0.0",
         "sourceUrl": "https://github.com/raphaelmue/jellyfin-plugin-scryer/releases/download/v0.1.28.0/Jellyfin.Plugin.Scryer_0.1.28.1.zip",
-        "checksum": "485d58121fbd9fdc3d0422e661f4c44e",
+        "checksum": "58d4e229c4ab61721b3243a82f0b838c",
         "timestamp": "2026-10-13T17:37:31Z"
       },
       {
@@ -21,7 +21,7 @@
         "changelog": "Hides the Scryer navigation bar in the fullscreen player and styles the drawer buttons like the native Jellyfin ones.",
         "targetAbi": "10.11.0.0",
         "sourceUrl": "https://github.com/raphaelmue/jellyfin-plugin-scryer/releases/download/v0.1.28.0/Jellyfin.Plugin.Scryer_0.1.28.0.zip",
-        "checksum": "4967ef868a09023ba3fba24c57693142",
+        "checksum": "fbd44c765d1490d4a551b7752210a791",
         "timestamp": "2026-10-13T17:37:31Z"
       },
       {
