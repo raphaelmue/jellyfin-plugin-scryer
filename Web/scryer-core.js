@@ -676,6 +676,22 @@
         }
         return null;
     }
+    function drawerButtonTemplate(section) {
+        var buttons = section.parentElement ? section.parentElement.querySelectorAll('a.MuiListItemButton-root') : [];
+        for (var i = 0; i < buttons.length; i++) {
+            var button = buttons[i];
+            if (/scryer-nav-/.test(button.className)) continue;
+            var icon = button.querySelector('.MuiListItemIcon-root');
+            var text = button.querySelector('.MuiListItemText-root');
+            var svg = icon && icon.querySelector('svg');
+            if (icon && text && svg) {
+                var label = text.querySelector('span');
+                return { className: button.className, iconClass: icon.getAttribute('class'), svgClass: svg.getAttribute('class'),
+                    textClass: text.getAttribute('class'), labelClass: label ? label.getAttribute('class') : '', labelTag: label ? label.tagName.toLowerCase() : 'span' };
+            }
+        }
+        return null;
+    }
     function findToolbarStack() {
         var favorites = document.querySelector('.MuiToolbar-root a[href="#/home?tab=1"]');
         if (favorites && favorites.parentElement) return favorites.parentElement;
@@ -685,6 +701,8 @@
     function ensureSection() {
         if (/^#\/(?:dashboard(?:\/|\?|$)|configurationpage(?:\?|$))/.test(window.location.hash)) return null;
         var sidebar = document.querySelector('.mainDrawer-scrollContainer');
+        // The fullscreen player has no navigation; never show the page-level fallback bar there.
+        if (/^#\/video(?:\/|\?|$)/.test(window.location.hash)) return null;
         // Modern Jellyfin uses React pages and has no desktop drawer. Keep our
         // navigation beside its page container, outside React's rendered page.
         var modernPages = document.querySelector('main .mainAnimatedPages');
@@ -732,20 +750,28 @@
     function injectNav() {
         if (!state.featureConfigReady) return;
         var section = ensureSection();
-        if (!section) return;
+        if (!section) {
+            if (document.querySelectorAll) document.querySelectorAll('.scryerSection').forEach(function (stale) { stale.remove(); });
+            return;
+        }
         // The toolbar can render after an earlier fallback placement; keep a single nav.
         if (document.querySelectorAll) document.querySelectorAll('.scryerSection').forEach(function (other) { if (other !== section) other.remove(); });
         PAGES.forEach(function (page) {
             if (section.querySelector('.scryer-nav-' + page.id)) return;
             var link = document.createElement('a');
             var inToolbar = section.classList && section.classList.contains('scryerToolbarNav');
-            if (!inToolbar) link.setAttribute('is', 'emby-linkbutton');
+            if (!inToolbar && !(section.classList && section.classList.contains('scryerDrawerNav') && drawerButtonTemplate(section))) link.setAttribute('is', 'emby-linkbutton');
             link.className = (inToolbar ? 'scryerToolbarButton ' : 'navMenuOption lnkMediaFolder emby-button ') + 'scryer-nav-' + page.id; link.href = pageRoute(page);
             var template = inToolbar ? toolbarButtonTemplate(section) : null;
             if (template) {
                 // Reuse the sibling MUI button's classes (and its theme overrides) so ours matches exactly.
                 link.className = template.className + ' scryer-nav-' + page.id;
                 link.innerHTML = '<span class="' + template.iconClass + '"><svg class="' + template.svgClass + '" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="' + page.iconPath + '"></path></svg></span>' + escapeHtml(page.title);
+            } else if (section.classList && section.classList.contains('scryerDrawerNav') && drawerButtonTemplate(section)) {
+                var drawerTemplate = drawerButtonTemplate(section);
+                link.className = drawerTemplate.className + ' scryer-nav-' + page.id;
+                link.innerHTML = '<div class="' + drawerTemplate.iconClass + '"><svg class="' + drawerTemplate.svgClass + '" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="' + page.iconPath + '"></path></svg></div>' +
+                    '<div class="' + drawerTemplate.textClass + '"><' + drawerTemplate.labelTag + ' class="' + drawerTemplate.labelClass + '">' + escapeHtml(page.title) + '</' + drawerTemplate.labelTag + '></div>';
             } else link.innerHTML = '<svg class="navMenuOptionIcon scryerNavIcon" viewBox="0 0 24 24" width="24" height="24" focusable="false" aria-hidden="true"><path fill="currentColor" d="' + page.iconPath + '"></path></svg><span class="sectionName navMenuOptionText">' + escapeHtml(page.title) + '</span>';
             link.addEventListener('click', function (event) {
                 event.preventDefault();
